@@ -1,0 +1,21 @@
+{
+  "name": "fitness-recomp-90",
+  "version": "1.0.0",
+  "description": "Professional 90-Day Body Recomposition System (MERN Stack + Excel Dashboard)",
+  "scripts": {
+    "start": "node server/server.js",
+    "server": "node server/server.js",
+    "client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "generate-excel": "python scripts/generate_excel.py"
+  },
+  "keywords": [
+    "fitness",
+    "body-recomposition",
+    "mern",
+    "workout-tracker",
+    "diet-manager"
+  ],
+  "author": "Abhishek Yadav",
+  "license": "ISC"
+}
