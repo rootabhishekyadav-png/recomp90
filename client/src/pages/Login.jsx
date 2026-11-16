@@ -1,106 +1,174 @@
-import React, { useState } from 'react';
-import { Lock, Zap, ArrowRight, ShieldCheck, Dumbbell } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { authAPI } from '../api/api';
 
 export default function Login({ onUnlock }) {
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isError, setIsError] = useState(false); // Triggers the 2x red blink
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [lockedCooldown, setLockedCooldown] = useState(0);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!password) {
-      setError('Please enter master password');
-      return;
+  const inputRef = useRef(null);
+  const failCountRef = useRef(0);
+
+  // Auto focus input on mount
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
     }
-    setLoading(true);
-    setError('');
+  }, []);
+
+  // Cooldown countdown
+  useEffect(() => {
+    if (lockedCooldown > 0) {
+      const timer = setInterval(() => {
+        setLockedCooldown((prev) => Math.max(0, prev - 1));
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [lockedCooldown]);
+
+  // Handle password verification
+  const verifyPassword = async (passToVerify) => {
+    if (isVerifying || lockedCooldown > 0) return;
+    setIsVerifying(true);
 
     try {
-      const res = await authAPI.unlock(password);
+      const res = await authAPI.unlock(passToVerify);
       if (res.data.success) {
+        setIsSuccess(true);
         localStorage.setItem('recomp_token', res.data.token);
-        onUnlock(res.data.profile);
+        setTimeout(() => {
+          onUnlock(res.data.profile);
+        }, 350);
+      } else {
+        triggerRedBlink();
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Incorrect password. Access denied.');
+      triggerRedBlink();
     } finally {
-      setLoading(false);
+      setIsVerifying(false);
+    }
+  };
+
+  // Trigger 2x Red Blink + Shake, then clear input
+  const triggerRedBlink = () => {
+    setIsError(true);
+    failCountRef.current += 1;
+
+    // After 2 red blinks (~700ms), clear input & re-focus
+    setTimeout(() => {
+      setIsError(false);
+      setPassword('');
+
+      // If failed 5 times, lock for 30s
+      if (failCountRef.current >= 5) {
+        setLockedCooldown(30);
+        failCountRef.current = 0;
+      } else {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }
+    }, 700);
+  };
+
+  const handleInputChange = (e) => {
+    if (isVerifying || lockedCooldown > 0 || isError) return;
+    const value = e.target.value;
+    setPassword(value);
+
+    // EXACT REQUIREMENT: Minimum 14 characters entered -> immediately check!
+    if (value.length >= 14) {
+      verifyPassword(value);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (password.length >= 14) {
+        verifyPassword(password);
+      } else if (password.length > 0) {
+        // Less than 14 characters entered -> instant red blink reject
+        triggerRedBlink();
+      }
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center p-4 relative overflow-hidden select-none">
-      {/* Background ambient glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-lime-500/10 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="w-full max-w-md bg-[#131316] border border-zinc-800 rounded-2xl p-8 shadow-2xl relative z-10">
-        <div className="flex flex-col items-center text-center mb-8">
-          <div className="w-16 h-16 bg-lime-500/10 border border-lime-500/30 rounded-2xl flex items-center justify-center mb-4 text-lime-400 glow-lime-sm">
-            <Zap className="w-8 h-8" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            RECOMP <span className="text-lime-400">90</span>
-          </h1>
-          <p className="text-xs uppercase tracking-widest text-zinc-400 mt-1">
-            Personal Fitness OS & Master Tracker
-          </p>
-          <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-800/80 border border-zinc-700 text-[11px] text-zinc-300">
-            <ShieldCheck className="w-3.5 h-3.5 text-lime-400" />
-            <span>Private & Encrypted Personal Vault</span>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">
-              Master Password
-            </label>
-            <div className="relative">
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your master password..."
-                autoFocus
-                className="w-full bg-[#18181b] border border-zinc-700 rounded-xl px-4 py-3.5 pl-11 text-white placeholder-zinc-500 focus:outline-none focus:border-lime-400 focus:ring-1 focus:ring-lime-400 transition text-sm font-medium"
-              />
-              <Lock className="w-4 h-4 text-zinc-400 absolute left-4 top-4" />
-            </div>
-            <p className="text-[11px] text-zinc-500 mt-1.5">
-              Enter authorized password to decrypt session
-            </p>
-          </div>
-
-          {error && (
-            <div className="p-3 bg-red-950/40 border border-red-500/40 rounded-xl text-red-400 text-xs">
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3.5 bg-lime-400 hover:bg-lime-300 text-black font-semibold rounded-xl flex items-center justify-center gap-2 transition duration-200 glow-lime-sm disabled:opacity-50 cursor-pointer"
-          >
-            {loading ? (
-              <span className="text-sm">Authenticating...</span>
-            ) : (
-              <>
-                <span className="text-sm">Unlock Fitness OS</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
-        </form>
-
-        <div className="mt-8 pt-6 border-t border-zinc-800 text-center">
-          <p className="text-xs text-zinc-500 flex items-center justify-center gap-1.5">
-            <Dumbbell className="w-3.5 h-3.5 text-lime-400" />
-            <span>90-Day Transformation Challenge • 13 Nov 2026 to 10 Feb 2027</span>
-          </p>
-        </div>
-      </div>
+    <div
+      className="fixed inset-0 bg-[#000000] flex items-center justify-center select-none overflow-hidden"
+      onClick={() => inputRef.current && inputRef.current.focus()}
+    >
+      {/* 
+        PURE STEALTH BLACK VAULT
+        Zero logos, Zero headers, Zero buttons, Zero labels, Zero clutter.
+        Fully locked aesthetic.
+      */}
+      <motion.div
+        animate={
+          isError
+            ? {
+                x: [0, -10, 10, -8, 8, -4, 4, 0],
+                transition: { duration: 0.65 }
+              }
+            : {}
+        }
+        className="w-full flex flex-col items-center justify-center px-4"
+      >
+        <motion.div
+          animate={
+            isError
+              ? {
+                  borderColor: [
+                    '#27272a',
+                    '#ef4444',
+                    '#18181b',
+                    '#ef4444',
+                    '#27272a'
+                  ],
+                  boxShadow: [
+                    '0 0 0px rgba(0,0,0,0)',
+                    '0 0 25px rgba(239,68,68,0.7)',
+                    '0 0 0px rgba(0,0,0,0)',
+                    '0 0 25px rgba(239,68,68,0.7)',
+                    '0 0 0px rgba(0,0,0,0)'
+                  ],
+                  transition: { duration: 0.65 }
+                }
+              : isSuccess
+              ? {
+                  borderColor: '#a3e635',
+                  boxShadow: '0 0 30px rgba(163,230,53,0.5)',
+                  transition: { duration: 0.3 }
+                }
+              : {}
+          }
+          className={`w-64 sm:w-72 bg-[#09090c] border rounded-2xl transition-all duration-200 relative ${
+            isError
+              ? 'border-red-500'
+              : isSuccess
+              ? 'border-lime-400'
+              : 'border-zinc-800/80 focus-within:border-zinc-600 focus-within:shadow-[0_0_15px_rgba(255,255,255,0.05)]'
+          }`}
+        >
+          <input
+            ref={inputRef}
+            type="password"
+            autoComplete="off"
+            spellCheck="false"
+            autoFocus
+            disabled={isVerifying || lockedCooldown > 0}
+            value={password}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            placeholder={lockedCooldown > 0 ? `LOCKED (${lockedCooldown}s)` : ''}
+            className="w-full bg-transparent text-center text-white text-base tracking-[0.35em] py-3.5 px-4 focus:outline-none placeholder-zinc-700 disabled:opacity-40 font-mono"
+          />
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
