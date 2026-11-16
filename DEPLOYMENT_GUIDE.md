@@ -112,3 +112,4 @@ git push -u origin main
 - [x] Custom confirmation dialog replaces browser `window.confirm()`.
 - [x] ImageKit cloud photo uploads configured for persistent storage across deployments.
 - [x] SPAs rewrite rules added (`vercel.json`) to prevent 404 on page reload.
+
