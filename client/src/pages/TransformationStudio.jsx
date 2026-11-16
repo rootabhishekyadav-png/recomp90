@@ -8,7 +8,9 @@ import {
   Info,
   Maximize2,
   Columns,
-  Sparkles
+  Sparkles,
+  X,
+  Eye
 } from 'lucide-react';
 import { photoAPI } from '../api/api';
 import { useAlert } from '../context/AlertContext';
@@ -26,6 +28,9 @@ export default function TransformationStudio() {
   const [compareAfterDay, setCompareAfterDay] = useState(30);
   const [compareAngle, setCompareAngle] = useState('front');
 
+  // Fullscreen photo lightbox state
+  const [activePhoto, setActivePhoto] = useState(null); // { url, title, dayNumber, angle, date }
+
   const fetchMilestones = async () => {
     try {
       const res = await photoAPI.getMilestones();
@@ -41,6 +46,17 @@ export default function TransformationStudio() {
 
   useEffect(() => {
     fetchMilestones();
+  }, []);
+
+  // Close lightbox on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setActivePhoto(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const handleAngleUpload = async (dayNumber, angle, e) => {
@@ -103,20 +119,34 @@ export default function TransformationStudio() {
             </p>
           </div>
 
-          <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl text-[11px] text-zinc-300 flex items-center gap-2 max-w-sm">
-            <Info className="w-4 h-4 text-lime-400 shrink-0" />
-            <span>Keep identical lighting, 2.5m distance, eye-level camera height and relaxed posture.</span>
+          <div className="flex items-center gap-2 self-start md:self-auto">
+            <span className="text-xs px-3 py-1.5 rounded-xl bg-lime-400/10 text-lime-400 border border-lime-400/30 font-semibold font-mono">
+              7 Check-In Milestones
+            </span>
           </div>
         </div>
       </div>
 
-      {/* BEFORE & AFTER SIDE-BY-SIDE COMPARATOR */}
-      <div className="bg-[#131316] border border-zinc-800 rounded-2xl p-5 shadow-lg">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+      {/* Guidelines Box */}
+      <div className="p-4 bg-zinc-900/60 border border-zinc-800 rounded-2xl text-xs text-zinc-400 flex items-start gap-3">
+        <Info className="w-5 h-5 text-lime-400 shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <p className="font-semibold text-white">Guidelines for Standardized Photos:</p>
+          <p>• Wear identical clothing, use identical posture (relaxed), same distance and camera height.</p>
+          <p>• Take photos in the morning after using the bathroom and before breakfast or water.</p>
+          <p>• <span className="text-lime-300 font-medium">Tip:</span> Tap any uploaded photo to view in high-resolution full screen.</p>
+        </div>
+      </div>
+
+      {/* ======================================================== */}
+      {/* 1. BEFORE & AFTER COMPARISON VISUALIZER                   */}
+      {/* ======================================================== */}
+      <div className="bg-[#131316] border border-zinc-800 rounded-2xl p-5 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-zinc-800/80 mb-4">
           <div className="flex items-center gap-2">
-            <Columns className="w-4 h-4 text-lime-400" />
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-              Before vs After Side-by-Side Visualizer
+            <Columns className="w-5 h-5 text-lime-400" />
+            <h3 className="text-base font-bold text-white tracking-tight">
+              Before & After Visualizer
             </h3>
           </div>
 
@@ -171,13 +201,36 @@ export default function TransformationStudio() {
               <span className="text-xs font-bold text-white">DAY {compareBeforeDay} (Before)</span>
               <span className="text-[10px] uppercase font-mono text-lime-400">{compareAngle}</span>
             </div>
-            <div className="h-80 bg-zinc-950 flex items-center justify-center p-2">
+            <div
+              className={`h-80 bg-zinc-950 flex items-center justify-center p-2 relative group ${
+                getAngleUrl(beforeObj, compareAngle) ? 'cursor-pointer' : ''
+              }`}
+              onClick={() => {
+                const url = getAngleUrl(beforeObj, compareAngle);
+                if (url) {
+                  setActivePhoto({
+                    url,
+                    title: `Day ${compareBeforeDay} • ${compareAngle.toUpperCase()} RELAXED (Before)`,
+                    dayNumber: compareBeforeDay,
+                    angle: compareAngle,
+                    date: beforeObj?.scheduledDate
+                  });
+                }
+              }}
+            >
               {getAngleUrl(beforeObj, compareAngle) ? (
-                <img
-                  src={getAngleUrl(beforeObj, compareAngle)}
-                  alt={`Day ${compareBeforeDay}`}
-                  className="h-full w-auto object-contain rounded-lg"
-                />
+                <>
+                  <img
+                    src={getAngleUrl(beforeObj, compareAngle)}
+                    alt={`Day ${compareBeforeDay}`}
+                    className="h-full w-auto object-contain rounded-lg transition-transform duration-200 group-hover:scale-[1.02]"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white">
+                    <div className="p-2 rounded-xl bg-black/80 border border-white/20 text-lime-400">
+                      <Maximize2 className="w-5 h-5" />
+                    </div>
+                  </div>
+                </>
               ) : (
                 <div className="text-center text-zinc-500 text-xs">
                   No {compareAngle} photo uploaded for Day {compareBeforeDay} yet.
@@ -192,13 +245,36 @@ export default function TransformationStudio() {
               <span className="text-xs font-bold text-white">DAY {compareAfterDay} (After)</span>
               <span className="text-[10px] uppercase font-mono text-lime-400">{compareAngle}</span>
             </div>
-            <div className="h-80 bg-zinc-950 flex items-center justify-center p-2">
+            <div
+              className={`h-80 bg-zinc-950 flex items-center justify-center p-2 relative group ${
+                getAngleUrl(afterObj, compareAngle) ? 'cursor-pointer' : ''
+              }`}
+              onClick={() => {
+                const url = getAngleUrl(afterObj, compareAngle);
+                if (url) {
+                  setActivePhoto({
+                    url,
+                    title: `Day ${compareAfterDay} • ${compareAngle.toUpperCase()} RELAXED (After)`,
+                    dayNumber: compareAfterDay,
+                    angle: compareAngle,
+                    date: afterObj?.scheduledDate
+                  });
+                }
+              }}
+            >
               {getAngleUrl(afterObj, compareAngle) ? (
-                <img
-                  src={getAngleUrl(afterObj, compareAngle)}
-                  alt={`Day ${compareAfterDay}`}
-                  className="h-full w-auto object-contain rounded-lg"
-                />
+                <>
+                  <img
+                    src={getAngleUrl(afterObj, compareAngle)}
+                    alt={`Day ${compareAfterDay}`}
+                    className="h-full w-auto object-contain rounded-lg transition-transform duration-200 group-hover:scale-[1.02]"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white">
+                    <div className="p-2 rounded-xl bg-black/80 border border-white/20 text-lime-400">
+                      <Maximize2 className="w-5 h-5" />
+                    </div>
+                  </div>
+                </>
               ) : (
                 <div className="text-center text-zinc-500 text-xs">
                   No {compareAngle} photo uploaded for Day {compareAfterDay} yet.
@@ -209,10 +285,13 @@ export default function TransformationStudio() {
         </div>
       </div>
 
-      {/* MILESTONE CHECK-IN CARDS */}
+      {/* ======================================================== */}
+      {/* 2. MILESTONE CHECK-IN CARDS (7 SESSIONS)                 */}
+      {/* ======================================================== */}
       <div className="space-y-4">
-        <h3 className="text-base font-bold text-white tracking-tight">
-          Milestone Photo Check-Ins (7 Sessions)
+        <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+          <span>Milestone Photo Check-Ins (7 Sessions)</span>
+          <span className="text-xs text-zinc-400 font-normal">Tap any photo to open full view</span>
         </h3>
 
         {milestones.map((milestone) => (
@@ -254,7 +333,7 @@ export default function TransformationStudio() {
                 return (
                   <div
                     key={angle}
-                    className="bg-[#18181b] border border-zinc-800 rounded-xl p-3 flex flex-col justify-between"
+                    className="bg-[#18181c] border border-zinc-800 rounded-xl p-3 flex flex-col justify-between"
                   >
                     <div className="flex items-center justify-between text-xs mb-2">
                       <span className="font-bold text-white uppercase tracking-wider">
@@ -263,13 +342,45 @@ export default function TransformationStudio() {
                       {url && <span className="text-lime-400 text-[10px] font-bold">Uploaded</span>}
                     </div>
 
-                    <div className="h-48 bg-zinc-950 rounded-lg overflow-hidden flex items-center justify-center relative mb-3">
+                    {/* Image Preview Box - Clickable for Full View */}
+                    <div
+                      className={`h-56 bg-zinc-950 rounded-xl overflow-hidden flex items-center justify-center relative mb-3 group ${
+                        url ? 'cursor-pointer' : ''
+                      }`}
+                      onClick={() => {
+                        if (url) {
+                          setActivePhoto({
+                            url,
+                            title: `Day ${milestone.dayNumber} • ${angle.toUpperCase()} RELAXED`,
+                            dayNumber: milestone.dayNumber,
+                            angle,
+                            date: milestone.scheduledDate
+                          });
+                        }
+                      }}
+                    >
                       {url ? (
-                        <img
-                          src={url}
-                          alt={`${milestone.dayNumber} ${angle}`}
-                          className="h-full w-full object-cover"
-                        />
+                        <>
+                          <img
+                            src={url}
+                            alt={`${milestone.dayNumber} ${angle}`}
+                            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                          />
+                          {/* Hover Overlay with Maximize icon */}
+                          <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex flex-col items-center justify-center gap-1.5 text-white">
+                            <div className="p-2 rounded-xl bg-black/80 backdrop-blur-md border border-white/20 text-lime-400 shadow-lg">
+                              <Maximize2 className="w-5 h-5 stroke-[2.2]" />
+                            </div>
+                            <span className="text-[11px] font-bold tracking-wide uppercase px-2 py-0.5 rounded bg-black/70">
+                              View Full Photo
+                            </span>
+                          </div>
+
+                          {/* Top-right zoom pill for mobile/touch */}
+                          <div className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/75 text-zinc-300 border border-white/10 md:hidden">
+                            <Maximize2 className="w-3.5 h-3.5" />
+                          </div>
+                        </>
                       ) : (
                         <div className="text-center p-3">
                           <Upload className="w-6 h-6 text-zinc-600 mx-auto mb-1" />
@@ -300,7 +411,55 @@ export default function TransformationStudio() {
           </div>
         ))}
       </div>
+
+      {/* ======================================================== */}
+      {/* 3. FULLSCREEN HIGH-RESOLUTION LIGHTBOX MODAL            */}
+      {/* ======================================================== */}
+      {activePhoto && (
+        <div
+          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 select-none animate-in fade-in duration-200"
+          onClick={() => setActivePhoto(null)}
+        >
+          <div
+            className="max-w-4xl w-full max-h-[92vh] flex flex-col items-center relative animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Bar */}
+            <div className="w-full flex items-center justify-between pb-3 px-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2.5 py-1 rounded-lg bg-lime-400 text-black font-extrabold text-xs font-mono uppercase">
+                  DAY {activePhoto.dayNumber}
+                </span>
+                <span className="text-sm sm:text-base font-bold text-white uppercase tracking-wider">
+                  {activePhoto.angle} Relaxed
+                </span>
+                {activePhoto.date && (
+                  <span className="text-xs text-zinc-400 hidden sm:inline">
+                    • Scheduled: {activePhoto.date}
+                  </span>
+                )}
+              </div>
+
+              <button
+                onClick={() => setActivePhoto(null)}
+                className="p-2 rounded-xl bg-zinc-800/90 hover:bg-zinc-700 text-zinc-300 hover:text-white transition cursor-pointer border border-zinc-700 shrink-0"
+                title="Close (ESC)"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Full Uncropped High-Res Image Display */}
+            <div className="w-full max-h-[82vh] bg-zinc-950/90 border border-zinc-800 rounded-2xl overflow-hidden flex items-center justify-center p-2 sm:p-4 shadow-2xl relative">
+              <img
+                src={activePhoto.url}
+                alt={activePhoto.title}
+                className="max-h-[78vh] max-w-full w-auto object-contain rounded-xl shadow-2xl"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
