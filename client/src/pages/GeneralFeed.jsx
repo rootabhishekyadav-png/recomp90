@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Camera,
   Upload,
@@ -10,9 +11,10 @@ import {
   X,
   Tag,
   Flame,
-  CheckCircle2
+  CheckCircle2,
+  Download
 } from 'lucide-react';
-import { photoAPI } from '../api/api';
+import { photoAPI, getAssetUrl } from '../api/api';
 import { useAlert } from '../context/AlertContext';
 
 export default function GeneralFeed() {
@@ -273,7 +275,7 @@ export default function GeneralFeed() {
                 {/* Image Container with Date Badge Overlay */}
                 <div className="relative aspect-square overflow-hidden bg-zinc-950">
                   <img
-                    src={item.imageUrl}
+                    src={getAssetUrl(item.imageUrl)}
                     alt={item.caption || 'Gym progress'}
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                   />
@@ -339,46 +341,71 @@ export default function GeneralFeed() {
         )}
       </div>
 
-      {/* FULLSCREEN PHOTO PREVIEW MODAL */}
-      {activePhoto && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="max-w-3xl w-full bg-[#18181b] border border-zinc-700 rounded-2xl overflow-hidden shadow-2xl relative">
-            <button
-              onClick={() => setActivePhoto(null)}
-              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/70 text-zinc-300 hover:text-white transition"
+      {/* FULLSCREEN PHOTO PREVIEW MODAL (RENDERED VIA PORTAL) */}
+      {activePhoto &&
+        createPortal(
+          <div
+            className="fixed inset-0 w-screen h-screen z-[99999] bg-black/95 backdrop-blur-2xl flex items-center justify-center p-3 sm:p-6 select-none animate-in fade-in duration-200"
+            onClick={() => setActivePhoto(null)}
+          >
+            <div
+              className="max-w-4xl w-full bg-[#18181b] border border-zinc-700 rounded-2xl overflow-hidden shadow-2xl relative flex flex-col"
+              onClick={(e) => e.stopPropagation()}
             >
-              <X className="w-5 h-5" />
-            </button>
+              <button
+                onClick={() => setActivePhoto(null)}
+                className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/80 text-zinc-300 hover:text-white transition cursor-pointer border border-zinc-700"
+                title="Close (ESC)"
+              >
+                <X className="w-5 h-5" />
+              </button>
 
-            <div className="max-h-[70vh] bg-black flex items-center justify-center overflow-hidden">
-              <img
-                src={activePhoto.imageUrl}
-                alt={activePhoto.caption}
-                className="max-h-[70vh] w-auto object-contain"
-              />
-            </div>
-
-            <div className="p-4 flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-mono font-bold text-lime-400 bg-lime-950/40 border border-lime-500/30 px-2 py-0.5 rounded">
-                    Day {activePhoto.dayNumber} • {activePhoto.date} at {activePhoto.time}
-                  </span>
-                </div>
-                <p className="text-sm text-white font-medium">{activePhoto.caption}</p>
+              <div className="max-h-[75vh] bg-black flex items-center justify-center overflow-hidden p-2">
+                <img
+                  src={getAssetUrl(activePhoto.imageUrl)}
+                  alt={activePhoto.caption}
+                  className="max-h-[72vh] w-auto object-contain rounded-lg"
+                />
               </div>
 
-              <button
-                onClick={() => handleDelete(activePhoto._id)}
-                className="px-3 py-1.5 bg-red-950/50 hover:bg-red-900 border border-red-500/40 text-red-400 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Delete</span>
-              </button>
+              <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-zinc-800">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-mono font-bold text-lime-400 bg-lime-950/40 border border-lime-500/30 px-2 py-0.5 rounded">
+                      Day {activePhoto.dayNumber} • {activePhoto.date} at {activePhoto.time}
+                    </span>
+                  </div>
+                  <p className="text-sm text-white font-medium">{activePhoto.caption}</p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <a
+                    href={getAssetUrl(activePhoto.imageUrl)}
+                    target="_blank"
+                    rel="noreferrer"
+                    download="gym_progress.jpg"
+                    className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition border border-zinc-700"
+                  >
+                    <Download className="w-3.5 h-3.5 text-lime-400" />
+                    <span>Save</span>
+                  </a>
+                  <button
+                    onClick={() => {
+                      const id = activePhoto._id;
+                      setActivePhoto(null);
+                      handleDelete(id);
+                    }}
+                    className="px-3 py-1.5 bg-red-950/50 hover:bg-red-900 border border-red-500/40 text-red-400 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete</span>
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

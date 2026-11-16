@@ -67,4 +67,17 @@ export const excelAPI = {
     : '/api/excel/download'
 };
 
+/**
+ * Resolves an image URL whether it's an ImageKit CDN URL (https://ik.imagekit.io/...)
+ * or a server local relative path (/uploads/...).
+ */
+export function getAssetUrl(path) {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+    return path;
+  }
+  const base = (rawBaseURL || 'https://recomp90.onrender.com').replace(/\/+$/, '').replace(/\/api$/, '');
+  return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+}
+
 export default API;
