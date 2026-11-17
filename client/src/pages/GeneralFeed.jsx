@@ -188,37 +188,35 @@ export default function GeneralFeed() {
 
   return (
     <div className="space-y-6 pb-16">
-      {/* Sleek Minimal Timeline Header with + Button */}
-      <div className="bg-[#131316] border border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-lg">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-lime-400/20 to-lime-500/10 border border-lime-400/30 flex items-center justify-center text-lime-400 shrink-0">
-              <Camera className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg sm:text-xl font-black text-white tracking-tight">
-                  Photo Feed
-                </h1>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 font-mono font-medium border border-zinc-700">
-                  {photos.length} {photos.length === 1 ? 'photo' : 'photos'}
-                </span>
-              </div>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                Every snapshot stamped with accurate date & time
-              </p>
-            </div>
+      {/* Sleek Mobile-First Header Bar (Single compact line, never wraps awkwardly) */}
+      <div className="bg-[#131316]/90 backdrop-blur-md border border-zinc-800/80 rounded-2xl px-3.5 py-2.5 sm:px-5 sm:py-3.5 shadow-lg flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-lime-400/10 border border-lime-400/30 flex items-center justify-center text-lime-400 shrink-0 shadow-[0_0_12px_rgba(163,230,53,0.15)]">
+            <Camera className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
           </div>
-
-          {/* Primary + Upload Button */}
-          <button
-            onClick={() => setIsUploadOpen(true)}
-            className="px-3.5 sm:px-4 py-2 rounded-xl bg-lime-400 hover:bg-lime-300 text-black font-extrabold text-xs sm:text-sm flex items-center gap-2 transition duration-150 glow-lime-sm cursor-pointer shadow-lg active:scale-95 shrink-0"
-          >
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.6]" />
-            <span>Upload Photo</span>
-          </button>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-base sm:text-lg font-black text-white tracking-tight truncate">
+                Photo Feed
+              </h1>
+              <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-zinc-800 text-lime-400 font-mono font-bold border border-lime-400/20 shrink-0">
+                {photos.length} {photos.length === 1 ? 'photo' : 'photos'}
+              </span>
+            </div>
+            <p className="text-[10px] sm:text-xs text-zinc-400 truncate hidden sm:block">
+              Auto-timestamped workout timeline
+            </p>
+          </div>
         </div>
+
+        {/* Compact, Ultra-clean Action Button */}
+        <button
+          onClick={() => setIsUploadOpen(true)}
+          className="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-lime-400 hover:bg-lime-300 text-black font-extrabold text-xs flex items-center gap-1.5 transition duration-150 shadow-[0_0_16px_rgba(163,230,53,0.35)] cursor-pointer active:scale-95 shrink-0"
+        >
+          <Plus className="w-4 h-4 stroke-[2.8]" />
+          <span>Upload</span>
+        </button>
       </div>
 
       {/* Grid of Feed Photos */}
@@ -335,14 +333,20 @@ export default function GeneralFeed() {
         )}
       </div>
 
-      {/* Floating Action Button (+ Button for Mobile) */}
-      <button
-        onClick={() => setIsUploadOpen(true)}
-        className="fixed bottom-20 right-5 md:hidden z-30 w-14 h-14 rounded-full bg-lime-400 hover:bg-lime-300 text-black shadow-2xl flex items-center justify-center cursor-pointer active:scale-95 transition glow-lime"
-        title="Upload Gym Photo"
-      >
-        <Plus className="w-7 h-7 stroke-[2.8]" />
-      </button>
+      {/* Floating Action Button (+ Button for Mobile) - PORTAL RENDERED */}
+      {!isUploadOpen &&
+        !activePhoto &&
+        createPortal(
+          <button
+            onClick={() => setIsUploadOpen(true)}
+            className="fixed bottom-20 right-4 lg:hidden z-40 w-13 h-13 rounded-full bg-lime-400 hover:bg-lime-300 text-black shadow-[0_8px_25px_rgba(163,230,53,0.5)] flex items-center justify-center cursor-pointer active:scale-90 transition-all duration-200 border-2 border-black/25"
+            title="Upload Gym Photo"
+            aria-label="Upload Gym Photo"
+          >
+            <Plus className="w-6 h-6 stroke-[3]" />
+          </button>,
+          document.body
+        )}
 
       {/* ======================================================== */}
       {/* UPLOAD MODAL POPUP (RENDERED VIA PORTAL)                */}
