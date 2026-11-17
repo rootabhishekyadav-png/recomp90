@@ -11,31 +11,42 @@ import Measurements from './pages/Measurements';
 import { authAPI } from './api/api';
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return Boolean(localStorage.getItem('recomp_token'));
+  });
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [profile, setProfile] = useState(null);
-  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [profile, setProfile] = useState(() => {
+    try {
+      const p = localStorage.getItem('recomp_profile');
+      return p ? JSON.parse(p) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [checkingAuth, setCheckingAuth] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('recomp_token');
     if (token) {
+      // Background revalidation: keep user immediately in app without blocking
       authAPI.checkSession()
         .then((res) => {
-          if (res.data.success) {
+          if (res.data?.success) {
             setIsAuthenticated(true);
-            setProfile(res.data.user?.profile);
-          } else {
-            localStorage.removeItem('recomp_token');
+            if (res.data.user?.profile) {
+              setProfile(res.data.user.profile);
+              localStorage.setItem('recomp_profile', JSON.stringify(res.data.user.profile));
+            }
           }
         })
-        .catch(() => {
-          localStorage.removeItem('recomp_token');
-        })
-        .finally(() => {
-          setCheckingAuth(false);
+        .catch((err) => {
+          // Only clear session if token is explicitly invalid (401), not on network latency
+          if (err.response?.status === 401) {
+            localStorage.removeItem('recomp_token');
+            localStorage.removeItem('recomp_profile');
+            setIsAuthenticated(false);
+          }
         });
-    } else {
-      setCheckingAuth(false);
     }
   }, []);
 
@@ -47,10 +58,14 @@ export default function App() {
   const handleUnlock = (userProfile) => {
     setIsAuthenticated(true);
     setProfile(userProfile);
+    if (userProfile) {
+      localStorage.setItem('recomp_profile', JSON.stringify(userProfile));
+    }
   };
 
   const handleLock = () => {
     localStorage.removeItem('recomp_token');
+    localStorage.removeItem('recomp_profile');
     setIsAuthenticated(false);
   };
 

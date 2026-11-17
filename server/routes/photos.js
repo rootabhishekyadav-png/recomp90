@@ -53,9 +53,20 @@ router.post('/general/upload', upload.single('photo'), async (req, res) => {
     }
 
     const now = new Date();
-    const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-    const dayNumber = getDayNumber('2026-11-13');
+    // Prioritize client's local device timestamp if supplied, otherwise format in IST (Asia/Kolkata)
+    const dateStr = req.body.clientDate || now.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'Asia/Kolkata'
+    });
+    const timeStr = req.body.clientTime || now.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Kolkata'
+    });
+    const dayNumber = req.body.dayNumber ? Number(req.body.dayNumber) : getDayNumber('2026-11-13');
 
     // Default local path
     let imageUrl = `/uploads/${req.file.filename}`;

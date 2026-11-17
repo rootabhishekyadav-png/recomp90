@@ -39,6 +39,9 @@ export default function Login({ onUnlock }) {
       if (res.data.success) {
         setIsSuccess(true);
         localStorage.setItem('recomp_token', res.data.token);
+        if (res.data.profile) {
+          localStorage.setItem('recomp_profile', JSON.stringify(res.data.profile));
+        }
         setTimeout(() => {
           onUnlock(res.data.profile);
         }, 350);

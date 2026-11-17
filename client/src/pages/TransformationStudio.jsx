@@ -17,6 +17,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { photoAPI, getAssetUrl } from '../api/api';
+import { compressImage } from '../utils/imageCompressor';
 import { useAlert } from '../context/AlertContext';
 
 const ANGLES = ['front', 'side', 'back'];
@@ -82,12 +83,15 @@ export default function TransformationStudio() {
     if (!file) return;
 
     setUploadingAngle({ dayNumber, angle });
-    const formData = new FormData();
-    formData.append('photo', file);
-    formData.append('dayNumber', dayNumber);
-    formData.append('angle', angle);
 
     try {
+      // Compress image on client-side before network upload
+      const compressedFile = await compressImage(file, { maxWidth: 1600, maxHeight: 1600, quality: 0.82 });
+      const formData = new FormData();
+      formData.append('photo', compressedFile);
+      formData.append('dayNumber', dayNumber);
+      formData.append('angle', angle);
+
       const res = await photoAPI.uploadMilestone(formData);
       if (res.data?.success) {
         await fetchMilestones();
